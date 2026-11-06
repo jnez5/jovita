@@ -1,15 +1,1378 @@
-<!DOCTYPE html>
-<html lan="en">
-
+<!doctype html>
+<html lang="en">
 <head>
-    <title>Home</title>
-    <link rel="icon" href="./favicon.png">
-    <link href="style.css" rel="stylesheet" type="text/css">
-    <meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Litter Weigh Log</title>
+<meta name="description" content="Daily weights and photos for the litter, stored on this phone.">
+<meta name="theme-color" content="#f3f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141a17" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Puppy Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
 </head>
+<body>
+<style>
+/* Layout: a daily weigh-in sheet. Summary of who needs attention first, then one row per puppy with its collar color, today's entry and its trend. */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --ink:#1d2621; --muted:#5d6a62; --line:#d9dfda;
+  --accent:#2f6b57; --accent-ink:#ffffff; --field:#f7f9f7;
+  --ok:#2e7d4f; --ok-bg:#e3f2e8; --warn:#9a6200; --warn-bg:#fbf0d9; --bad:#b3261e; --bad-bg:#fbe3e1;
+  --neutral-bg:#eceeed;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-data:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a17; --surface:#1c2420; --ink:#e6ece8; --muted:#9aa8a0; --line:#2f3a34;
+  --accent:#7cc4a8; --accent-ink:#0f1a15; --field:#232c27;
+  --ok:#7fd3a0; --ok-bg:#1d3326; --warn:#f0bf63; --warn-bg:#3a2e14; --bad:#ff958c; --bad-bg:#40201d;
+  --neutral-bg:#29322d; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#141a17; --surface:#1c2420; --ink:#e6ece8; --muted:#9aa8a0; --line:#2f3a34;
+  --accent:#7cc4a8; --accent-ink:#0f1a15; --field:#232c27;
+  --ok:#7fd3a0; --ok-bg:#1d3326; --warn:#f0bf63; --warn-bg:#3a2e14; --bad:#ff958c; --bad-bg:#40201d;
+  --neutral-bg:#29322d; color-scheme:dark;}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:880px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,5vw,40px);line-height:1.05;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+header{display:grid;gap:10px}
+.meta{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;color:var(--muted)}
+.meta label{display:flex;gap:8px;align-items:center}
+input,select,button{font:inherit;color:inherit}
+input[type=date],select,.wt{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+button{cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);padding:6px 12px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:5px 12px;background:transparent}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:560px){.summary{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:2px}
+.tile b{font-family:var(--f-data);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.tile span{font-size:13px;color:var(--muted)}
+.tile.ok b{color:var(--ok)} .tile.warn b{color:var(--warn)} .tile.bad b{color:var(--bad)}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+@media (min-width:521px){.row > .avatar-btn{grid-row:span 2;align-self:center}}
+#rows.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;padding:16px}
+#rows.cards > .empty{grid-column:1 / -1}
+@media (max-width:520px){#rows.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px}}
+.pup{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:grid;align-content:start;min-width:0}
+.pup.open{grid-column:1 / -1;grid-template-columns:minmax(0,320px) minmax(0,1fr)}
+@media (max-width:640px){.pup.open{grid-template-columns:minmax(0,1fr)}}
+.pup.open .detail{grid-column:1 / -1;margin:0 12px 12px}
+.hero-wrap{position:relative;border-bottom:6px solid var(--c);background:var(--c);align-self:start}
+.hero{display:block;width:100%;padding:0;border:0;border-radius:0;background:none;line-height:0}
+.hero img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;max-width:100%}
+.empty-hero{aspect-ratio:1/1;display:grid;place-items:center;line-height:1.4}
+.empty-hero span{background:var(--surface);color:var(--ink);font-weight:700;font-size:13px;padding:6px 12px;border-radius:999px}
+.hero-badges{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;flex-wrap:wrap;pointer-events:none}
+.hero-badges .tag{background:var(--surface);color:var(--ink)}
+.card-body{padding:10px 12px 12px;display:grid;gap:8px;align-content:start;min-width:0}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1px var(--line);flex:none}
+.pup .entry{justify-content:flex-start;flex-wrap:wrap;padding-left:0;grid-column:auto}
+.pup .mini svg{display:block;max-width:100%;height:auto}
+.pup .mini{min-width:0;flex:1 1 90px}
+.pup .linkish{justify-self:start}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.pup .actions .details-btn{flex:1 1 100%;padding:10px 12px;font-size:15px}
+.pup .actions .act{flex:1 1 0;padding:9px 6px;font-weight:700;border-color:var(--accent);color:var(--accent);white-space:nowrap}
+.pup .actions .act span,.pg-info .actions button span{font-size:17px;line-height:1}
+.pg{position:fixed;inset:0;z-index:30;background:rgba(10,14,12,.6);overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;justify-items:center;padding-block:calc(28px + env(safe-area-inset-top,0px)) calc(28px + env(safe-area-inset-bottom,0px));padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+.pg-panel{background:var(--bg);width:min(880px,100%);max-height:100%;align-self:center;border-radius:18px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35);display:flex;flex-direction:column;min-height:0}
+.pg-hint{color:#e6ece8;font-size:13px;opacity:.85;padding-top:10px;pointer-events:none}
+.close-x{margin-left:auto;width:40px;height:40px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--field);font-size:26px;line-height:1;padding:0;display:grid;place-items:center;color:var(--ink)}
+.pg-head{flex:none;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px}
+.pg-id{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.pg-bubble{width:56px;height:56px;flex:none;border-radius:50%;border:3px solid var(--c);background:var(--c);padding:0;overflow:hidden;line-height:0;display:block}
+.pg-bubble img{width:100%;height:100%;object-fit:cover;display:block}
+.pg-name{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.pg-name h2{font-family:var(--f-display);font-weight:800;font-size:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pg-head h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.back{border:0;background:none;color:var(--accent);font-weight:700;padding:8px 6px;font-size:15px;white-space:nowrap}
+.back span{font-size:22px;line-height:0;vertical-align:-2px}
+.pg-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px;display:grid;gap:16px;align-content:start}
+@media (max-width:520px){.pg-body{padding:12px;gap:12px}}
+.pg-info{display:grid;gap:10px;align-content:start}
+.pg-info .sub{font-size:13px;color:var(--muted);font-family:var(--f-data)}
+.pg-info .actions button{flex:1 1 0;padding:12px;font-size:16px}
+.pg-sec{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:12px;min-width:0}
+.pg-sec h3{font-family:var(--f-display);font-weight:600;font-size:16px;margin:0}
+.pg-sec .marks{border-top:0;padding-top:0}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(10,14,12,.55);display:grid;grid-template-columns:minmax(0,1fr);place-items:end center;overflow:hidden}
+.sheet-card{background:var(--surface);color:var(--ink);width:min(460px,100%);max-width:100%;min-width:0;box-sizing:border-box;max-height:100%;overflow-y:auto;border-radius:18px 18px 0 0;display:grid;gap:14px;padding-block:20px calc(20px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+@media (min-width:600px){.modal{place-items:center}.sheet-card{border-radius:18px}}
+.mrow{display:flex;gap:10px;align-items:center;justify-content:space-between;min-width:0}
+.mrow input[type=date]{min-width:0;max-width:60%;flex:0 1 auto}
+.mrow.col{flex-direction:column;align-items:stretch;gap:6px;font-size:14px}
+.mrow.col input{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:10px}
+.big-wt{display:flex;align-items:center;gap:10px;min-width:0;border:2px solid var(--accent);border-radius:12px;padding:6px 14px;background:var(--field)}
+.big-wt input{flex:1;min-width:0;width:100%;border:0;background:none;font-family:var(--f-data);font-size:36px;font-weight:600;padding:6px 0;font-variant-numeric:tabular-nums}
+.big-wt input:focus-visible{outline:none}
+.big-wt span{font-family:var(--f-data);font-size:20px;color:var(--muted)}
+.modal-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.modal-actions button{padding:10px 16px;font-size:15px}
+.modal-actions .spacer{flex:1}
+.ghost{border:0;background:none;color:var(--bad);padding-left:0}
+.seg.wide{display:flex}
+.seg.wide button{flex:1;padding:9px 10px}
+.upload-btn.big{justify-self:stretch;justify-content:center;padding:14px;font-size:16px;background:var(--accent);color:var(--accent-ink)}
+.reorder-bar{display:grid;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--field)}
+.sort-row{display:flex;flex-wrap:wrap;gap:6px}
+.sort-row button{font-size:14px;padding:7px 11px}
+#reorderDone{justify-self:start;padding:9px 22px}
+.sheet-head #reorderBtn{font-weight:700;border-color:var(--accent);color:var(--accent)}
+.reordering .pup{outline:2px dashed var(--accent);outline-offset:-2px}
+.move{display:grid;grid-template-columns:minmax(44px,1fr) auto minmax(44px,1fr);align-items:center;gap:6px}
+.move button{height:46px;font-size:26px;line-height:1;padding:0;font-weight:700;border-color:var(--accent);color:var(--accent)}
+.move button:disabled{opacity:.35;cursor:default}
+.move .pos{text-align:center;white-space:nowrap;font-weight:600;font-size:15px;font-family:var(--f-data);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.install-tip{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:10px 12px;font-size:14px}
+.install-tip > div{flex:1;min-width:0}
+.install-tip button{border:0;background:none;font-size:22px;line-height:1;padding:0 4px;color:var(--muted)}
+.bk-nudge{justify-self:start;border-color:var(--warn);background:var(--warn-bg);color:var(--warn);font-weight:700;font-size:14px}
+.bk-confirm{display:grid;gap:10px;border:1px solid var(--bad);background:var(--bad-bg);color:var(--ink);border-radius:10px;padding:12px}
+.danger-btn{background:var(--bad);border-color:var(--bad);color:#fff}
+.avatar-btn{padding:0;border:0;background:none;border-radius:50%;line-height:0}
+.avatar{width:76px;height:76px;border-radius:50%;border:3px solid var(--c);display:block;object-fit:cover;background:var(--c);box-shadow:0 0 0 1px var(--line)}
+.photos{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:560px){.photos{grid-template-columns:minmax(0,1fr)}}
+.latest{display:grid;gap:6px}
+.ph{padding:0;border:0;background:none;border-radius:10px;line-height:0;width:100%}
+.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:3px solid var(--c);max-width:100%}
+.ph-empty{aspect-ratio:4/3;border:2px dashed var(--line);border-radius:10px;display:grid;place-items:center;color:var(--muted);font-size:13px;text-align:center;padding:10px}
+.cap{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.more{display:grid;gap:10px;align-content:start}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px}
+.thumb{padding:0;border:0;background:none;display:grid;gap:2px;justify-items:center;font-size:11px;color:var(--muted)}
+.thumb span{max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.marks{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.thumb img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.upload-btn{justify-self:start;display:inline-flex;gap:6px;align-items:center;border-radius:8px;border:1px solid var(--accent);color:var(--accent);padding:6px 12px;font-weight:700;cursor:pointer;font-size:14px}
+.upload-btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.chart-wrap{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 10px 8px;display:grid;gap:6px}
+.chart{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.sw-line{width:18px;height:3px;border-radius:2px;background:var(--accent);display:inline-block}
+.sw-dash{width:18px;height:0;border-top:2px dashed var(--warn);display:inline-block}
+.group-body{padding:16px;display:grid;gap:14px}
+.photos.wide{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+@media (max-width:560px){.photos.wide{grid-template-columns:minmax(0,1fr)}}
+.photos.wide .ph img,.photos.wide .ph-empty{aspect-ratio:3/2}
+.cap-text{font-size:14px;color:var(--ink)}
+.group-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.group-add input[type=text]{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:6px 9px;min-width:0;flex:1 1 180px}
+.lb{position:fixed;inset:0;z-index:50;background:rgba(10,14,12,.86);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.lb-inner{display:grid;gap:10px;max-width:min(900px,100%);justify-items:center}
+.lb img{max-width:100%;max-height:72vh;border-radius:10px;object-fit:contain}
+.lb-frame{position:relative;display:inline-block;line-height:0;max-width:100%}
+.lb-frame.picking img{cursor:crosshair;outline:2px dashed #e6ece8;outline-offset:3px}
+.lb-dot{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.55);pointer-events:none}
+.lb-edit{display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.lb-edit input{background:#232c27;color:#e6ece8;border:1px solid #3a4640;border-radius:8px;padding:6px 9px;min-width:0;width:220px;max-width:100%}
+.lb-hint{color:#e6ece8;font-size:14px;text-align:center}
+.lb-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;color:#e6ece8;font-size:14px}
+.lb-bar button{background:#1c2420;color:#e6ece8;border-color:#3a4640}
+.lb-bar button.danger{color:#ff958c;border-color:#6a2e29}
+.who{min-width:0;display:grid;gap:2px}
+.who .name{font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.who .sub{font-size:13px;color:var(--muted);font-family:var(--f-data);font-variant-numeric:tabular-nums}
+.entry{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.wt{width:84px;font-family:var(--f-data);text-align:right;font-variant-numeric:tabular-nums}
+.unit{font-family:var(--f-data);font-size:13px;color:var(--muted);width:16px}
+.chip{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.bad{background:var(--bad-bg);color:var(--bad)} .chip.none{background:var(--neutral-bg);color:var(--muted)}
+.tag{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.spark{grid-column:2 / 4;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.spark svg{display:block}
+.linkish{background:none;border:0;padding:0;color:var(--accent);font-size:13px;text-decoration:underline;text-underline-offset:2px}
+.detail{grid-column:1 / -1;background:var(--field);border-radius:8px;padding:12px;display:grid;gap:12px}
+.detail .fields{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.detail label{display:flex;gap:6px;align-items:center;font-size:14px}
+.detail input[type=text]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 9px;width:140px}
+.hist{overflow-x:auto}
+.hist table{border-collapse:collapse;font-family:var(--f-data);font-size:13px;font-variant-numeric:tabular-nums;min-width:100%}
+.hist th,.hist td{text-align:right;padding:4px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.hist th:first-child,.hist td:first-child{text-align:left}
+.hist th{color:var(--muted);font-weight:600;font-family:var(--f-body)}
+.status-line{font-size:13px;color:var(--muted);min-height:1.5em}
+.empty{padding:28px 16px;text-align:center;display:grid;gap:10px;justify-items:center;color:var(--muted)}
+.guide{display:grid;gap:8px;font-size:14px;color:var(--muted);max-width:68ch}
+.guide h2{color:var(--ink)}
+.guide ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.ro-note{font-size:13px;color:var(--warn)}
+@media (max-width:520px){
+  .row{grid-template-columns:auto minmax(0,1fr)}
+  .entry{grid-column:1 / -1;justify-content:flex-start;padding-left:0}
+  .spark{grid-column:1 / -1;padding-left:0}
+  .avatar{width:64px;height:64px}
+}
+@media (prefers-reduced-motion: no-preference){.row{transition:background .2s}}
+.row.saved{background:var(--ok-bg)}
+</style>
 
-<body class="font" style="background-color:black">
-    <h2>Jovita Nez</h2>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">German Shepherd litter</div>
+    <h1>Litter Weigh Log</h1>
+    <div class="meta">
+      <label for="birthDate">Born <input type="date" id="birthDate"></label>
+      <label for="logDate">Weigh-in date <input type="date" id="logDate"></label>
+      <span id="ageNote"></span>
+      <div class="seg" role="group" aria-label="Units">
+        <button type="button" id="uOz" aria-pressed="true">oz</button>
+        <button type="button" id="uG" aria-pressed="false">g</button>
+      </div>
+    </div>
+    <div class="install-tip" id="installTip" hidden>
+      <div><b>Add this to your Home Screen</b> so it opens without signal: tap the Share button <span aria-hidden="true">⎙</span>, then <b>Add to Home Screen</b>.</div>
+      <button type="button" id="installHide" aria-label="Hide this tip">&times;</button>
+    </div>
+    <button type="button" class="bk-nudge" id="bkNudge" hidden></button>
+    <div class="ro-note" id="roNote" hidden>You can view this log, but only people with edit access can record weights.</div>
+  </header>
+
+  <section class="summary" aria-label="Litter summary">
+    <div class="tile ok"><b id="sOk">0</b><span>On track</span></div>
+    <div class="tile warn"><b id="sWarn">0</b><span>Watch closely</span></div>
+    <div class="tile bad"><b id="sBad">0</b><span>Call the vet</span></div>
+    <div class="tile"><b id="sTodo">0</b><span>Not weighed yet</span></div>
+  </section>
+
+  <section class="sheet">
+    <div class="sheet-head">
+      <h2 id="sheetTitle">Weigh-in</h2>
+      <span class="status-line" id="statusLine">Loading the litter…</span>
+      <button type="button" id="reorderBtn" hidden>Reorder</button>
+    </div>
+    <div class="reorder-bar" id="reorderBar" hidden>
+      <div class="cap">Use ‹ and › on each card to move it, or sort the whole litter:</div>
+      <div class="sort-row">
+        <button type="button" data-sort="collar">Collar color</button>
+        <button type="button" data-sort="light">Lightest first</button>
+        <button type="button" data-sort="heavy">Heaviest first</button>
+        <button type="button" data-sort="girls">Girls first</button>
+        <button type="button" data-sort="boys">Boys first</button>
+        <button type="button" data-sort="name">Name A–Z</button>
+      </div>
+      <button type="button" class="primary" id="reorderDone">Done</button>
+    </div>
+    <div id="rows" class="cards"></div>
+  </section>
+
+  <section class="sheet" aria-labelledby="groupTitle">
+    <div class="sheet-head">
+      <h2 id="groupTitle">Litter photos</h2>
+      <span class="status-line">The whole crew, week by week</span>
+    </div>
+    <div class="group-body" id="groupBody"></div>
+  </section>
+
+  <section class="sheet" id="backupSec" aria-labelledby="bkTitle">
+    <div class="sheet-head"><h2 id="bkTitle">Backup</h2><span class="status-line">Stored only on this phone</span></div>
+    <div class="group-body">
+      <p class="cap-text" style="margin:0">Everything in this app lives on this phone. Save a backup to iCloud Drive or Files every few days, so nothing is lost if the phone is lost, reset or replaced.</p>
+      <div class="cap" id="bkInfo"></div>
+      <div class="group-add">
+        <button type="button" class="primary" id="bkMake">Create backup</button>
+        <button type="button" class="primary" id="bkSave" hidden>Save backup file</button>
+        <label class="upload-btn" for="restoreFile">Restore from backup<input class="sr" type="file" id="restoreFile" accept=".zip,application/zip"></label>
+      </div>
+      <div class="bk-confirm" id="bkConfirm" hidden>
+        <div id="bkConfirmText"></div>
+        <div class="group-add"><button type="button" class="primary danger-btn" id="bkApply">Replace everything with this backup</button><button type="button" id="bkCancel">Cancel</button></div>
+      </div>
+      <div class="status-line" id="bkMsg" role="status"></div>
+    </div>
+  </section>
+
+  <section class="guide">
+    <h2>How the flags work</h2>
+    <ul>
+      <li><b>First 48 hours:</b> a small dip is normal. Losing more than 10% of birth weight is flagged red.</li>
+      <li><b>After day 2:</b> each puppy should gain about 5–10% of its body weight per day. Under 5% is yellow. Any loss is red.</li>
+      <li><b>Day 10 on:</b> a puppy that hasn't doubled its birth weight is flagged yellow at least.</li>
+      <li>The <b>Lightest</b> tag marks the smallest puppy at the latest weigh-in. That's usually the one to rotate onto a back teat or supplement with milk replacer.</li>
+      <li><b>Photos:</b> tap <b>+ Photo</b> on a puppy. A weekly photo becomes its profile picture, labeled by week of life. Marking photos are kept separately.</li>
+      <li>Weigh at the same time each day, before a feeding if you can. These flags are a guide, not a diagnosis. Call your vet about any red flag, or a puppy that is cold, weak, or crying nonstop.</li>
+    </ul>
+  </section>
+</div>
+
+<div class="pg" id="pg" hidden role="dialog" aria-modal="true" aria-labelledby="pgTitle">
+  <div class="pg-panel">
+    <div class="pg-head">
+      <div class="pg-id" id="pgHead"><h2 id="pgTitle">Puppy</h2></div>
+      <button type="button" id="pgBack" class="close-x" aria-label="Close details">&times;</button>
+    </div>
+    <div class="pg-body" id="pgBody"></div>
+  </div>
+  <div class="pg-hint">Tap outside to close</div>
+</div>
+
+<div class="modal" id="wm" hidden role="dialog" aria-modal="true" aria-labelledby="wmTitle">
+  <div class="sheet-card">
+    <h2 id="wmTitle">Add weight</h2>
+    <div class="cap" id="wmSub"></div>
+    <label class="mrow" for="wmDate">Date <input type="date" id="wmDate"></label>
+    <div class="big-wt"><label class="sr" for="wmVal">Weight</label><input id="wmVal" inputmode="decimal" autocomplete="off"><span id="wmUnit">oz</span></div>
+    <div class="status-line" data-msg id="wmMsg"></div>
+    <div class="modal-actions">
+      <button type="button" id="wmClear" class="ghost">Clear this day</button>
+      <span class="spacer"></span>
+      <button type="button" id="wmCancel">Cancel</button>
+      <button type="button" id="wmSave" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="pm" hidden role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+  <div class="sheet-card">
+    <h2 id="pmTitle">Add photo</h2>
+    <div class="seg wide" role="group" aria-label="Photo type">
+      <button type="button" id="pmProfile" aria-pressed="true">Weekly photo</button>
+      <button type="button" id="pmMarks" aria-pressed="false">Markings</button>
+    </div>
+    <div class="cap" id="pmHelp"></div>
+    <div id="pmNoteWrap" hidden><label class="mrow col" for="pmNote">What the photos show (optional)<input type="text" id="pmNote" maxlength="80" placeholder="e.g. white chest spot"></label></div>
+    <label class="upload-btn big" for="pmFile"><span id="pmPick">Choose photo</span><input class="sr" type="file" id="pmFile" accept="image/*,.heic,.heif"></label>
+    <div class="status-line" data-msg id="pmMsg"></div>
+    <div class="modal-actions"><span class="spacer"></span><button type="button" id="pmClose">Close</button></div>
+  </div>
+</div>
+
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Puppy photo">
+  <div class="lb-inner">
+    <span class="lb-frame" id="lbFrame"><img id="lbImg" alt=""><span class="lb-dot" id="lbDot" hidden></span></span>
+    <div class="lb-bar">
+      <span id="lbCap"></span>
+      <span class="lb-edit" id="lbEdit" hidden>
+        <label class="sr" for="lbNote">Caption</label>
+        <input type="text" id="lbNote" maxlength="80" placeholder="Add a caption">
+        <button type="button" id="lbSave">Save caption</button>
+      </span>
+      <button type="button" id="lbFocus">Choose focus</button>
+      <button type="button" id="lbDel" class="danger">Delete photo</button>
+      <button type="button" id="lbClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- On-phone storage: everything lives in this phone's browser database ----------
+  // ---------- Minimal .zip writer/reader (no compression), used for backups ----------
+  const CRC_T = (()=>{ const t = new Uint32Array(256); for (let n=0;n<256;n++){ let c=n; for (let k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); t[n] = c>>>0; } return t; })();
+  function crc32(u8){ let c = 0xFFFFFFFF; for (let i=0;i<u8.length;i++) c = CRC_T[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  async function makeZip(entries, onProgress){
+    const enc = new TextEncoder(), parts = [], central = [];
+    let offset = 0;
+    const d = new Date();
+    const dosTime = (d.getHours()<<11) | (d.getMinutes()<<5) | (d.getSeconds()>>1);
+    const dosDate = ((d.getFullYear()-1980)<<9) | ((d.getMonth()+1)<<5) | d.getDate();
+    for (let i=0;i<entries.length;i++){
+      const e = entries[i];
+      const name = enc.encode(e.name);
+      const isBlob = (typeof Blob!=="undefined") && e.data instanceof Blob;
+      const bytes = isBlob ? new Uint8Array(await e.data.arrayBuffer()) : e.data;
+      const crc = crc32(bytes), size = bytes.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+      lh.setUint16(10,dosTime,true); lh.setUint16(12,dosDate,true); lh.setUint32(14,crc,true);
+      lh.setUint32(18,size,true); lh.setUint32(22,size,true); lh.setUint16(26,name.length,true); lh.setUint16(28,0,true);
+      parts.push(lh.buffer, name, isBlob ? e.data : bytes);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true);
+      ch.setUint16(12,dosTime,true); ch.setUint16(14,dosDate,true); ch.setUint32(16,crc,true);
+      ch.setUint32(20,size,true); ch.setUint32(24,size,true); ch.setUint16(28,name.length,true); ch.setUint32(42,offset,true);
+      central.push(ch.buffer, name);
+      offset += 30 + name.length + size;
+      if (onProgress) onProgress(i+1, entries.length);
+    }
+    const cdSize = central.reduce((s,x)=>s+x.byteLength, 0);
+    const eo = new DataView(new ArrayBuffer(22));
+    eo.setUint32(0,0x06054b50,true); eo.setUint16(8,entries.length,true); eo.setUint16(10,entries.length,true);
+    eo.setUint32(12,cdSize,true); eo.setUint32(16,offset,true);
+    return new Blob([...parts, ...central, eo.buffer], {type:"application/zip"});
+  }
+  async function readZip(file){
+    const tailLen = Math.min(file.size, 65557);
+    const tail = new DataView(await file.slice(file.size-tailLen).arrayBuffer());
+    let eocd = -1;
+    for (let i=tailLen-22;i>=0;i--){ if (tail.getUint32(i,true)===0x06054b50){ eocd = i; break; } }
+    if (eocd < 0) throw new Error("not-zip");
+    const count = tail.getUint16(eocd+10,true), cdSize = tail.getUint32(eocd+12,true), cdOff = tail.getUint32(eocd+16,true);
+    const cd = new DataView(await file.slice(cdOff, cdOff+cdSize).arrayBuffer());
+    const dec = new TextDecoder(), out = {};
+    let p = 0;
+    for (let i=0;i<count;i++){
+      if (cd.getUint32(p,true)!==0x02014b50) throw new Error("bad-zip");
+      const method = cd.getUint16(p+10,true), csize = cd.getUint32(p+20,true);
+      const nlen = cd.getUint16(p+28,true), xlen = cd.getUint16(p+30,true), clen = cd.getUint16(p+32,true), loff = cd.getUint32(p+42,true);
+      const name = dec.decode(new Uint8Array(cd.buffer, cd.byteOffset+p+46, nlen));
+      out[name] = {method, csize, loff};
+      p += 46 + nlen + xlen + clen;
+    }
+    async function get(name){
+      const e = out[name]; if (!e) return null;
+      const lh = new DataView(await file.slice(e.loff, e.loff+30).arrayBuffer());
+      const start = e.loff + 30 + lh.getUint16(26,true) + lh.getUint16(28,true);
+      const raw = file.slice(start, start+e.csize);
+      if (e.method===0) return raw;
+      if (e.method===8 && typeof DecompressionStream!=="undefined") return await new Response(raw.stream().pipeThrough(new DecompressionStream("deflate-raw"))).blob();
+      throw new Error("compressed");
+    }
+    return {names:Object.keys(out), get};
+  }
+
+  let idb = null;
+  const docs = new Map(), urls = new Map(), subs = new Set();
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const rand32 = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), b=>b.toString(16).padStart(2,"0")).join("");
+
+  function openDb(){
+    return new Promise((res, rej)=>{
+      const r = indexedDB.open("puppy-log", 1);
+      r.onupgradeneeded = ()=>{ const d = r.result; d.createObjectStore("docs", {keyPath:"path"}); d.createObjectStore("photos", {keyPath:"id"}); };
+      r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error); r.onblocked = ()=>rej(new Error("blocked"));
+    });
+  }
+  function tx(stores, mode, fn){
+    return new Promise((res, rej)=>{
+      const t = idb.transaction(stores, mode);
+      const out = fn(t);
+      t.oncomplete = ()=>res(out && out.result !== undefined ? out.result : out);
+      t.onerror = ()=>rej(t.error); t.onabort = ()=>rej(t.error || new Error("abort"));
+    });
+  }
+  function mapErr(e){
+    const n = e && (e.name || "");
+    if (/Quota/i.test(n)) return {code:"quota_or_state", message:"Phone storage is full."};
+    return {code:"unavailable", message:(e && e.message) || "Storage error"};
+  }
+  const recBlob = rec => rec.blob || new Blob([rec.buf], {type: rec.type || "image/jpeg"});
+
+  const ready = (async()=>{
+    idb = await openDb();
+    const [d, p] = await Promise.all([
+      tx("docs", "readonly", t=>t.objectStore("docs").getAll()),
+      tx("photos", "readonly", t=>t.objectStore("photos").getAll())
+    ]);
+    (d||[]).forEach(r=>docs.set(r.path, r.data));
+    (p||[]).forEach(r=>urls.set(r.id, URL.createObjectURL(recBlob(r))));
+  })();
+
+  let persistAsked = false;
+  function askPersist(){ if (persistAsked) return; persistAsked = true; try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){} }
+  function notify(){ for (const f of [...subs]) { try { f(); } catch(e){ console.error(e); } } }
+
+  async function writeDoc(path, data){
+    try {
+      await tx("docs", "readwrite", t=> data===null ? t.objectStore("docs").delete(path) : t.objectStore("docs").put({path, data}));
+    } catch(e){ throw mapErr(e); }
+    if (data===null) docs.delete(path); else docs.set(path, data);
+    askPersist(); notify();
+  }
+  function deepMerge(t, p){
+    for (const k of Object.keys(p)){
+      const v = p[k];
+      if (v && typeof v==="object" && !Array.isArray(v) && t[k] && typeof t[k]==="object" && !Array.isArray(t[k])) deepMerge(t[k], v);
+      else t[k] = v;
+    }
+  }
+  const snapDoc = path => { const d = docs.get(path); return {id:path.split("/").pop(), exists:!!d, data:()=>d?clone(d):undefined, metadata:{fromCache:false, hasPendingWrites:false}}; };
+  function docRef(path){
+    return {
+      id: path.split("/").pop(), path,
+      get: async()=>snapDoc(path),
+      set: async(b)=>writeDoc(path, clone(b)),
+      update: async(b)=>{ const cur = docs.get(path); if (!cur) throw {code:"invalid_argument", message:"Document does not exist"}; const next = clone(cur); deepMerge(next, clone(b)); await writeDoc(path, next); },
+      delete: async()=>writeDoc(path, null),
+      onSnapshot: (next)=>{ const f = ()=>next(snapDoc(path)); subs.add(f); setTimeout(f, 0); return ()=>subs.delete(f); }
+    };
+  }
+  function collRef(name){
+    return {
+      path: name,
+      doc: (id)=>docRef(name + "/" + (id || rand32())),
+      onSnapshot: (next)=>{
+        const f = ()=>{
+          const ds = [...docs.keys()].filter(k=>k.startsWith(name+"/") && k.split("/").length===2).sort().map(snapDoc);
+          next({docs:ds, size:ds.length, empty:!ds.length, docChanges:()=>[], metadata:{fromCache:false, hasPendingWrites:false}});
+        };
+        subs.add(f); setTimeout(f, 0); return ()=>subs.delete(f);
+      }
+    };
+  }
+  const db = { doc: docRef, collection: collRef };
+
+  async function putPhoto(id, blob){
+    try { await tx("photos", "readwrite", t=>t.objectStore("photos").put({id, blob, created:Date.now()})); }
+    catch(e){
+      if (/Quota/i.test(e && e.name || "")) throw mapErr(e);
+      const buf = await blob.arrayBuffer();
+      try { await tx("photos", "readwrite", t=>t.objectStore("photos").put({id, buf, type:blob.type, created:Date.now()})); }
+      catch(e2){ throw mapErr(e2); }
+    }
+  }
+  const assets = {
+    upload: async(blob, opts)=>{
+      const b = blob.type ? blob : new Blob([blob], {type:(opts && opts.type) || "image/jpeg"});
+      const id = rand32();
+      await putPhoto(id, b);
+      urls.set(id, URL.createObjectURL(b)); askPersist();
+      return {id, url:urls.get(id), sizeBytes:b.size, contentType:b.type};
+    },
+    delete: async(id)=>{
+      try { await tx("photos", "readwrite", t=>t.objectStore("photos").delete(id)); } catch(e){ throw mapErr(e); }
+      const u = urls.get(id); if (u){ URL.revokeObjectURL(u); urls.delete(id); }
+      return {deleted:!!u};
+    },
+    list: async()=>({assets:[...urls.keys()].map(id=>({id, url:urls.get(id)})), usage:{files:urls.size}})
+  };
+  const user = { can: async()=>true, canEdit: async()=>true, isOwner: async()=>true, id: async()=>"me" };
+
+  window.srcOf = id => urls.get(id) || "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
+  window.claude = { use: async(name)=>{ try { await ready; } catch(e){ return null; } return ({db, assets, user})[name] || null; } };
+
+  // ---------- Backups ----------
+  async function exportZip(onProgress){
+    await ready;
+    const recs = await tx("photos", "readonly", t=>t.objectStore("photos").getAll());
+    const data = {app:"litter-weigh-log", version:1, exportedAt:new Date().toISOString(), docs:Object.fromEntries(docs), photos:(recs||[]).map(r=>r.id)};
+    const entries = [{name:"data.json", data:new TextEncoder().encode(JSON.stringify(data, null, 1))}];
+    for (const r of (recs||[])) entries.push({name:"photos/"+r.id+".jpg", data:recBlob(r)});
+    const zip = await makeZip(entries, onProgress);
+    return {zip, puppies:[...docs.keys()].filter(k=>k.startsWith("pups/")).length, photos:(recs||[]).length};
+  }
+  async function readBackup(file){
+    let z;
+    try { z = await readZip(file); } catch(e){ throw new Error("That file isn't a Litter Weigh Log backup (.zip)."); }
+    const dj = await z.get("data.json");
+    if (!dj) throw new Error("That .zip doesn't contain a Litter Weigh Log backup.");
+    let data; try { data = JSON.parse(await dj.text()); } catch(e){ throw new Error("The backup file is damaged."); }
+    if (!data || data.app!=="litter-weigh-log" || !data.docs) throw new Error("That .zip doesn't contain a Litter Weigh Log backup.");
+    const photoNames = z.names.filter(n=>/^photos\/[0-9a-f]{32}\.jpg$/.test(n));
+    return {
+      exportedAt: data.exportedAt, from: data.source || "",
+      puppies: Object.keys(data.docs).filter(k=>/^pups\/[^/]+$/.test(k)).length,
+      photos: photoNames.length,
+      apply: async(onProgress)=>{
+        await ready;
+        const loaded = [];
+        for (let i=0;i<photoNames.length;i++){
+          const b = await z.get(photoNames[i]);
+          loaded.push({id:photoNames[i].slice(7,39), blob:new Blob([b], {type:"image/jpeg"})});
+          if (onProgress) onProgress(i+1, photoNames.length);
+        }
+        await tx(["docs","photos"], "readwrite", t=>{ t.objectStore("docs").clear(); t.objectStore("photos").clear(); });
+        await tx("docs", "readwrite", t=>{ const s = t.objectStore("docs"); for (const [path, d] of Object.entries(data.docs)) if (/^[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+$/.test(path) && d && typeof d==="object") s.put({path, data:d}); });
+        for (const p of loaded) await putPhoto(p.id, p.blob);
+        askPersist();
+      }
+    };
+  }
+  async function usage(){
+    try { if (navigator.storage && navigator.storage.estimate){ const e = await navigator.storage.estimate(); return e.usage || 0; } } catch(e){}
+    return null;
+  }
+  window.LocalStore = { ready, exportZip, readBackup, usage, hasData:()=>[...docs.keys()].some(k=>k.startsWith("pups/")), photoCount:()=>urls.size };
+})();
+</script>
+<script>
+(function(){
+  const G_PER_OZ = 28.3495;
+  const COLLARS = {red:"#d93a3a",orange:"#ef8a24",yellow:"#f2cf2e",green:"#3aa35c",blue:"#3172d6",purple:"#8a4fd1",pink:"#ec7fb6",black:"#222222",white:"#f7f7f7",brown:"#8a5a33",teal:"#1f9e9a",gray:"#8f9792"};
+  const DEFAULT_COLLARS = ["red","orange","yellow","green","blue","purple","pink","black","white","brown"];
+  const $ = id => document.getElementById(id);
+
+  const pad = n => String(n).padStart(2,"0");
+  const todayStr = () => { const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+  const dayNum = s => { const [y,m,d]=s.split("-").map(Number); return Date.UTC(y,m-1,d)/86400000; };
+  const fmtDate = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString(undefined,{month:"short",day:"numeric"}); };
+
+  let unit = "oz";
+  try { const u = localStorage.getItem("unit"); if (u==="g"||u==="oz") unit=u; } catch(e){}
+  let pups = [];
+  let litter = { birthDate: todayStr() };
+  let logDate = todayStr();
+  let confirmed = false, reorder = false, savingOrder = false;
+  let assets = null, groupPhotos = [], pageId = null, wmId = null, pmId = null, pmMode = "profile", pmBusy = false;
+  let db = null, canWrite = true, open = new Set(), loaded = false;
+
+  const toUnit = g => unit==="oz" ? (g/G_PER_OZ) : g;
+  const fmtW = g => g==null ? "—" : (unit==="oz" ? (g/G_PER_OZ).toFixed(1) : Math.round(g).toString());
+  const fromInput = v => { const n=parseFloat(String(v).replace(",",".")); if(!isFinite(n)||n<=0) return null; return unit==="oz" ? n*G_PER_OZ : n; };
+
+  function entries(p){ return Object.entries(p.weights||{}).filter(([d,g])=>typeof g==="number").sort((a,b)=>a[0]<b[0]?-1:1); }
+  function upTo(p, date){ return entries(p).filter(([d])=>d<=date); }
+
+  function assess(p, date){
+    const e = upTo(p, date);
+    if (!e.length) return {level:"none", label:"No weight yet"};
+    const birth = (p.weights||{})[litter.birthDate] ?? e[0][1];
+    const [ld, lw] = e[e.length-1];
+    const age = dayNum(ld) - dayNum(litter.birthDate);
+    let res;
+    if (e.length < 2) res = {level:"ok", label:"Baseline"};
+    else {
+      const [pd, pw] = e[e.length-2];
+      const days = Math.max(1, dayNum(ld)-dayNum(pd));
+      const pct = ((lw-pw)/pw)/days*100;
+      if (age <= 2) {
+        const drop = (birth-lw)/birth*100;
+        if (drop > 10) res = {level:"bad", label:"Lost >10% of birth weight"};
+        else if (lw < pw) res = {level:"ok", label:"Small dip (normal early)"};
+        else res = {level:"ok", label:"Gaining"};
+      } else if (lw < pw) res = {level:"bad", label:"Losing weight"};
+      else if (pct < 5) res = {level:"warn", label:"Slow gain"};
+      else res = {level:"ok", label:"Gaining"};
+      res.pct = pct;
+    }
+    if (age >= 10 && lw < 2*birth && res.level==="ok") res = {...res, level:"warn", label:"Not doubled yet"};
+    res.age = age; res.latest = lw; res.latestDate = ld; res.birth = birth;
+    return res;
+  }
+
+  function spark(p, date){
+    const e = upTo(p, date);
+    if (e.length < 2) return "";
+    const W=150,H=34,P=3;
+    const xs=e.map(([d])=>dayNum(d)), ys=e.map(([,g])=>g);
+    const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+    const sx = v => P + (x1===x0?0:(v-x0)/(x1-x0))*(W-2*P);
+    const sy = v => H-P - (y1===y0?0.5:(v-y0)/(y1-y0))*(H-2*P);
+    const pts = e.map(([d,g])=>sx(dayNum(d)).toFixed(1)+","+sy(g).toFixed(1));
+    const last = pts[pts.length-1].split(",");
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+      <polygon points="${sx(x0)},${H-P} ${pts.join(" ")} ${sx(x1)},${H-P}" fill="var(--accent)" fill-opacity=".14"/>
+      <polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${last[0]}" cy="${last[1]}" r="3" fill="var(--accent)"/></svg>`;
+  }
+
+  function weightChart(p, date){
+    const e = upTo(p, date);
+    if (e.length < 2) return `<div class="status-line">The weight graph appears after two weigh-ins.</div>`;
+    const W=600,H=230,L=52,R=16,T=14,B=34;
+    const b0 = dayNum(litter.birthDate);
+    const pts = e.map(([d,g])=>({x:dayNum(d)-b0, g}));
+    const birth = (p.weights||{})[litter.birthDate] ?? e[0][1];
+    const x0 = Math.min(0, pts[0].x), x1 = Math.max(pts[pts.length-1].x, x0+2);
+    const target = x => birth*Math.pow(1.05, Math.max(0,x));
+    const tSteps = []; for(let x=Math.max(0,x0); x<=x1; x+=Math.max(0.5,(x1-x0)/40)) tSteps.push(x); tSteps.push(x1);
+    const vals = pts.map(q=>q.g).concat(tSteps.map(target));
+    let y0 = toUnit(Math.min(...vals))*0.94, y1 = toUnit(Math.max(...vals))*1.04;
+    const raw = (y1-y0)/4, mag = Math.pow(10, Math.floor(Math.log10(raw))), step = [1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=raw);
+    y0 = Math.floor(y0/step)*step; y1 = Math.ceil(y1/step)*step;
+    const sx = x => L + (x-x0)/(x1-x0)*(W-L-R);
+    const sy = v => T + (1-(v-y0)/(y1-y0))*(H-T-B);
+    const dec = step<1 ? 1 : 0;
+    let grid = "";
+    for (let v=y0; v<=y1+1e-9; v+=step){ const y=sy(v).toFixed(1);
+      grid += `<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${y}" text-anchor="end" dominant-baseline="central" fill="var(--muted)" font-size="11" font-family="var(--f-data)">${v.toFixed(dec)}</text>`; }
+    const xStep = Math.max(1, Math.ceil((x1-x0)/7));
+    let xt = "";
+    for (let x=Math.ceil(x0); x<=x1; x+=xStep) xt += `<text x="${sx(x).toFixed(1)}" y="${H-B+16}" text-anchor="middle" fill="var(--muted)" font-size="11" font-family="var(--f-data)">${x}</text>`;
+    const tline = tSteps.map(x=>sx(x).toFixed(1)+","+sy(toUnit(target(x))).toFixed(1)).join(" ");
+    const line = pts.map(q=>sx(q.x).toFixed(1)+","+sy(toUnit(q.g)).toFixed(1)).join(" ");
+    const last = pts[pts.length-1];
+    const lx = sx(last.x), ly = sy(toUnit(last.g));
+    const area = `${sx(pts[0].x).toFixed(1)},${H-B} ${line} ${lx.toFixed(1)},${H-B}`;
+    return `<div class="chart-wrap">
+      <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight of ${esc(p.name)} over time, in ${unit}">
+        ${grid}${xt}
+        <text x="${(L+W-R)/2}" y="${H-4}" text-anchor="middle" fill="var(--muted)" font-size="11">Day of life</text>
+        <text x="4" y="${T-2}" fill="var(--muted)" font-size="11" dominant-baseline="hanging">${unit}</text>
+        <polyline points="${tline}" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="5 4" opacity=".8"/>
+        <polygon points="${area}" fill="var(--accent)" fill-opacity=".12"/>
+        <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${pts.map(q=>`<circle cx="${sx(q.x).toFixed(1)}" cy="${sy(toUnit(q.g)).toFixed(1)}" r="3" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"><title>Day ${q.x}: ${fmtW(q.g)} ${unit}</title></circle>`).join("")}
+        <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="5" fill="var(--accent)"/>
+        <text x="${Math.min(lx, W-R-4).toFixed(1)}" y="${(ly-12).toFixed(1)}" text-anchor="${lx>W-R-60?"end":"middle"}" fill="var(--ink)" font-size="12" font-weight="700" font-family="var(--f-data)">${fmtW(last.g)}</text>
+      </svg>
+      <div class="legend"><span><i class="sw-line"></i>${esc(p.name)}</span><span><i class="sw-dash"></i>Minimum healthy pace (5% a day from birth)</span></div>
+    </div>`;
+  }
+
+  const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+  function render(){
+    const ae = document.activeElement, fid = ae && ae.id, fval = ae && "value" in ae ? ae.value : null;
+    renderInner();
+    if (fid && (fid.startsWith("w-") || /^(n|c|s|mk)-/.test(fid) || fid==="gCap")) { const el=$(fid); if(el){ if(fval!=null && el.value!==fval) el.value=fval; el.focus(); } }
+  }
+  function renderGroup(){
+    const box = $("groupBody");
+    const ph = groupPhotos.filter(x=>x&&typeof x.id==="string"&&/^[0-9a-f]{32}$/.test(x.id)).map((x,i)=>({...x,i})).sort((a,b)=>a.date===b.date?a.i-b.i:(a.date<b.date?-1:1));
+    const latest = ph[ph.length-1], older = ph.slice(0,-1).reverse();
+    const capLine = x => `${weekLabel(x.date)} · ${fmtDate(x.date)}`;
+    box.innerHTML = `<div class="photos wide" style="--c:var(--accent)">
+      <div class="latest">${latest
+        ? `<button class="ph" data-view="__group|${latest.id}"><img style="${fpos(latest)}" src="${srcOf(latest.id)}" alt="${esc(latest.caption||"Latest litter photo")}"></button>
+           <div class="cap"><span class="tag">Latest</span>${capLine(latest)}</div>
+           ${latest.caption?`<div class="cap-text">${esc(latest.caption)}</div>`:""}`
+        : `<div class="ph-empty">No group photos yet. Line them up once a week to see the whole litter grow.</div>`}</div>
+      <div class="more">
+        ${older.length?`<div class="cap">Earlier photos</div><div class="thumbs">${older.map(o=>`<button class="thumb" data-view="__group|${o.id}"><img style="${fpos(o)}" src="${srcOf(o.id)}" alt="${esc(o.caption||"Litter photo, "+weekLabel(o.date))}" loading="lazy">${weekLabel(o.date)}</button>`).join("")}</div>`:""}
+        ${assets&&canWrite&&db?`<div class="group-add">
+            <label class="sr" for="gCap">Caption</label>
+            <input type="text" id="gCap" maxlength="140" placeholder="Caption (optional)">
+            <label class="upload-btn" for="gFile">Add group photo for ${fmtDate(logDate)}<input class="sr" type="file" id="gFile" accept="image/*,.heic,.heif"></label>
+          </div>`:(!assets?`<div class="cap">Only people who can edit this log can add photos.</div>`:"")}
+      </div>
+    </div>`;
+    box.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ const [pid,aid]=b.dataset.view.split("|"); openLb(pid,aid); });
+    const f=$("gFile"); if(f) f.addEventListener("change",()=>{ const file=f.files&&f.files[0]; if(file) addGroupPhoto(file, ($("gCap")?.value||"").trim()); f.value=""; });
+  }
+  function renderInner(){
+    renderGroup();
+    $("birthDate").value = litter.birthDate;
+    $("logDate").value = logDate;
+    const age = dayNum(logDate)-dayNum(litter.birthDate);
+    $("ageNote").textContent = age>=0 ? `Day ${age} of life` : "Before the birth date";
+    $("uOz").setAttribute("aria-pressed", unit==="oz"); $("uG").setAttribute("aria-pressed", unit==="g");
+    $("sheetTitle").textContent = (logDate===todayStr() ? "Today's weigh-in" : "Weigh-in for "+fmtDate(logDate));
+    $("roNote").hidden = canWrite;
+    $("reorderBtn").hidden = !(db && canWrite && pups.length>1) || reorder;
+    $("reorderBar").hidden = !reorder;
+    $("rows").classList.toggle("reordering", reorder);
+
+    const box = $("rows");
+    if (!loaded) { box.innerHTML = `<div class="empty">Loading the litter…</div>`; return; }
+    if (!pups.length){
+      box.innerHTML = `<div class="empty"><div>No puppies are set up yet. Each puppy gets a row with a collar color so you can tell them apart.</div>
+        ${canWrite?'<div class="group-add" style="justify-content:center"><button class="primary" id="setup">Set up 10 puppies</button><label class="upload-btn" for="restoreFile">Restore from a backup</label></div>':""}</div>`;
+      const b=$("setup"); if(b) b.onclick=setupLitter;
+      setSummary([]); return;
+    }
+
+    const list = pups.slice().sort((a,b)=>(a.order??0)-(b.order??0));
+    const scored = list.map(p=>({p, a:assess(p, logDate), today:(p.weights||{})[logDate]}));
+    const withW = scored.filter(s=>s.a.latest!=null);
+    let lightestId = null;
+    if (withW.length>1){ lightestId = withW.reduce((m,s)=>s.a.latest<m.a.latest?s:m).p.id; }
+    setSummary(scored);
+
+    const details = {}, heads = {};
+    box.innerHTML = scored.map(({p,a,today},pos)=>{
+      const col = COLLARS[p.collar]||COLLARS.gray;
+      const pctTxt = a.pct!=null ? `${a.pct>=0?"+":""}${a.pct.toFixed(1)}%/day` : "";
+      const sub = a.latest!=null
+        ? `Latest ${fmtW(a.latest)} ${unit} (${fmtDate(a.latestDate)})${pctTxt?" · "+pctTxt:""} · Birth ${fmtW(a.birth)}`
+        : "No weights recorded";
+      const isOpen = open.has(p.id);
+      const hist = entries(p);
+      const ph = photosOf(p), latestPh = ph[ph.length-1];
+      const hero = latestPh
+        ? `<button class="hero" data-view="${p.id}|${latestPh.id}" aria-label="View latest photo of ${esc(p.name)}"><img style="${fpos(latestPh)}" src="${srcOf(latestPh.id)}" alt="" loading="lazy"></button>`
+        : `<button class="hero empty-hero" ${assets&&canWrite?`data-addp="${p.id}"`:`data-page="${p.id}"`} aria-label="Add a photo of ${esc(p.name)}"><span>${assets&&canWrite?"Add a photo":"No photo yet"}</span></button>`;
+      const older = ph.slice(0,-1).reverse();
+      const photoBlock = `<div class="photos" style="--c:${col}">
+          <div class="latest">${latestPh
+            ? `<button class="ph" data-view="${p.id}|${latestPh.id}"><img style="${fpos(latestPh)}" src="${srcOf(latestPh.id)}" alt="Latest photo of ${esc(p.name)}"></button>
+               <div class="cap"><span class="tag">Latest</span>${weekLabel(latestPh.date)} · ${fmtDate(latestPh.date)}</div>`
+            : `<div class="ph-empty">No photos yet. Add one each week to watch ${esc(p.name)} grow.</div>`}</div>
+          <div class="more">
+            ${older.length?`<div class="cap">Earlier photos</div><div class="thumbs">${older.map(o=>`<button class="thumb" data-view="${p.id}|${o.id}"><img style="${fpos(o)}" src="${srcOf(o.id)}" alt="Photo of ${esc(p.name)}, ${weekLabel(o.date)}" loading="lazy">${weekLabel(o.date)}</button>`).join("")}</div>`:""}
+            ${assets&&canWrite?`<label class="upload-btn" for="f-${p.id}">Add photo for ${fmtDate(logDate)}<input class="sr" type="file" id="f-${p.id}" accept="image/*,.heic,.heif"></label>`
+              :(!assets?`<div class="cap">Only people who can edit this log can add photos.</div>`:"")}
+          </div>
+        </div>`;
+      const mk = marksOf(p).reverse();
+      const marksBlock = `<div class="marks">
+          <div class="cap"><b class="cap-text">Markings</b>${mk.length?` · ${mk.length} photo${mk.length>1?"s":""}`:""}</div>
+          ${mk.length?`<div class="thumbs">${mk.map(o=>`<button class="thumb" data-view="${p.id}|${o.id}|m"><img style="${fpos(o)}" src="${srcOf(o.id)}" alt="${esc(p.name)} markings${o.note?": "+esc(o.note):""}" loading="lazy"><span>${esc(o.note||fmtDate(o.date))}</span></button>`).join("")}</div>`
+            :`<div class="cap">No marking photos yet. Add close-ups of spots, blazes, saddle patterns or toe colors that help tell ${esc(p.name)} apart.</div>`}
+          ${assets&&canWrite?`<div class="group-add">
+              <label class="sr" for="mk-${p.id}">What the photos show</label>
+              <input type="text" id="mk-${p.id}" maxlength="80" placeholder="What it shows, e.g. white chest spot (optional)">
+              <label class="upload-btn" for="mf-${p.id}">Add marking photos<input class="sr" type="file" multiple id="mf-${p.id}" accept="image/*,.heic,.heif"></label>
+            </div>`:""}
+        </div>`;
+      heads[p.id] = `${latestPh
+          ? `<button class="pg-bubble" style="--c:${col}" data-view="${p.id}|${latestPh.id}" aria-label="View latest photo of ${esc(p.name)}"><img style="${fpos(latestPh)}" src="${srcOf(latestPh.id)}" alt=""></button>`
+          : `<span class="pg-bubble" style="--c:${col}"></span>`}
+        <div class="pg-name"><h2 id="pgTitle">${esc(p.name||"Puppy")}</h2>${p.sex==="boy"?'<span class="tag">Boy</span>':p.sex==="girl"?'<span class="tag">Girl</span>':""}</div>`;
+      details[p.id] = `
+        <div class="pg-info">
+          <div class="pg-chips"><span class="chip ${a.level}">${a.label}</span>${p.id===lightestId?'<span class="tag">Lightest</span>':""}</div>
+          <div class="sub">${sub}</div>
+          <div class="actions">
+            ${canWrite&&db?`<button class="primary" data-addw="${p.id}"><span aria-hidden="true">+</span> Weight</button>`:""}
+            ${assets&&canWrite?`<button class="primary" data-addp="${p.id}"><span aria-hidden="true">+</span> Photo</button>`:""}
+          </div>
+          <div class="status-line" data-msg></div>
+        </div>
+        <section class="pg-sec"><h3>Weight</h3>${weightChart(p, logDate)}<div class="hist">${hist.length?`<table><thead><tr><th>Date</th><th>Day</th><th>Weight (${unit})</th><th>Change</th></tr></thead><tbody>${
+            hist.map(([d,g],i)=>{ const prev=i?hist[i-1]:null; let ch="—";
+              if(prev){ const dd=Math.max(1,dayNum(d)-dayNum(prev[0])); const pc=((g-prev[1])/prev[1])/dd*100; ch=(pc>=0?"+":"")+pc.toFixed(1)+"%/day"; }
+              return `<tr><td>${fmtDate(d)}</td><td>${dayNum(d)-dayNum(litter.birthDate)}</td><td>${fmtW(g)}</td><td>${ch}</td></tr>`; }).reverse().join("")
+          }</tbody></table>`:"<div class='status-line'>No weights yet.</div>"}</div>
+</section>
+        <section class="pg-sec"><h3>Weekly photos</h3>${photoBlock}</section>
+        <section class="pg-sec">${marksBlock}</section>
+        <section class="pg-sec"><h3>Profile</h3>
+          <div class="fields">
+            <label for="n-${p.id}">Name <input type="text" id="n-${p.id}" value="${esc(p.name||"")}" ${canWrite?"":"disabled"}></label>
+            <label for="c-${p.id}">Collar <select id="c-${p.id}" ${canWrite?"":"disabled"}>${Object.keys(COLLARS).map(k=>`<option value="${k}" ${k===p.collar?"selected":""}>${k}</option>`).join("")}</select></label>
+            <label for="s-${p.id}">Sex <select id="s-${p.id}" ${canWrite?"":"disabled"}>
+              <option value="" ${!p.sex?"selected":""}>Not set</option>
+              <option value="boy" ${p.sex==="boy"?"selected":""}>Boy</option>
+              <option value="girl" ${p.sex==="girl"?"selected":""}>Girl</option>
+            </select></label>
+            ${canWrite&&today!=null?`<button data-clear="${p.id}">Clear ${fmtDate(logDate)} weight</button>`:""}
+          </div>
+</section>`;
+      return `<article class="pup" data-id="${p.id}" style="--c:${col}">
+        <div class="hero-wrap">
+          ${hero}
+          <div class="hero-badges"><span class="chip ${a.level}">${a.label}</span>${p.id===lightestId?'<span class="tag">Lightest</span>':""}</div>
+        </div>
+        <div class="card-body">
+          <div class="who"><div class="name"><span class="dot" title="${esc(p.collar||"")} collar"></span>${esc(p.name||"Puppy")}
+            ${p.sex==="boy"?'<span class="tag">Boy</span>':p.sex==="girl"?'<span class="tag">Girl</span>':""}</div>
+            <div class="sub">${sub}</div></div>
+          <span class="mini">${spark(p, logDate)}</span>
+          ${reorder?`<div class="move">
+            <button type="button" data-mv="${p.id}|-1" ${pos===0?"disabled":""} aria-label="Move ${esc(p.name)} earlier">‹</button>
+            <span class="pos">#${pos+1}</span>
+            <button type="button" data-mv="${p.id}|1" ${pos===list.length-1?"disabled":""} aria-label="Move ${esc(p.name)} later">›</button>
+          </div>`:""}
+          <div class="actions" ${reorder?"hidden":""}>
+            <button class="primary details-btn" data-page="${p.id}">Details</button>
+            ${canWrite&&db?`<button class="act" data-addw="${p.id}" aria-label="Add weight for ${esc(p.name)}"><span aria-hidden="true">+</span> Weight</button>`:""}
+            ${assets&&canWrite?`<button class="act" data-addp="${p.id}" aria-label="Add photo of ${esc(p.name)}"><span aria-hidden="true">+</span> Photo</button>`:""}
+          </div>
+        </div>
+      </article>`;
+    }).join("");
+
+    wire(box);
+    if (pageId){
+      if (!details[pageId]) closePage();
+      else {
+        const body = $("pgBody"), st = body.scrollTop;
+        $("pgHead").innerHTML = heads[pageId]; wire($("pgHead"));
+        body.innerHTML = details[pageId]; wire(body); body.scrollTop = st;
+      }
+    }
+  }
+  function wire(root){
+    root.querySelectorAll("[data-mv]").forEach(b=>b.onclick=()=>{ const [id,d]=b.dataset.mv.split("|"); moveRel(id, Number(d)); });
+    root.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>openPage(b.dataset.page));
+    root.querySelectorAll("[data-addw]").forEach(b=>b.onclick=()=>openWm(b.dataset.addw));
+    root.querySelectorAll("[data-addp]").forEach(b=>b.onclick=()=>openPm(b.dataset.addp));
+    root.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ const [pid,aid,kind]=b.dataset.view.split("|"); openLb(pid,aid,kind); });
+    root.querySelectorAll("input[id^='f-']").forEach(f=>f.addEventListener("change",()=>{ const file=f.files&&f.files[0]; if(file) addPhoto(f.id.slice(2), file); f.value=""; }));
+    root.querySelectorAll("input[id^='mf-']").forEach(f=>f.addEventListener("change",()=>{ const files=[...(f.files||[])]; const id=f.id.slice(3); if(files.length) addMarks(id, files, ($("mk-"+id)?.value||"").trim()); f.value=""; }));
+    root.querySelectorAll("[data-clear]").forEach(b=>b.onclick=()=>clearWeight(b.dataset.clear));
+    root.querySelectorAll("input[id^='n-']").forEach(i=>i.addEventListener("change",()=>savePup(i.id.slice(2),{name:i.value.trim()||"Puppy"})));
+    root.querySelectorAll("select[id^='s-']").forEach(s=>s.addEventListener("change",()=>savePup(s.id.slice(2),{sex:s.value})));
+    root.querySelectorAll("select[id^='c-']").forEach(s=>s.addEventListener("change",()=>savePup(s.id.slice(2),{collar:s.value})));
+  }
+
+  function ordered(){ return pups.slice().sort((a,b)=>(a.order??0)-(b.order??0)); }
+  async function applyOrder(list, msg){
+    if(!db || savingOrder) return;
+    savingOrder = true;
+    const changes = [];
+    list.forEach((p,i)=>{ if(p.order!==i+1){ changes.push([p.id,i+1]); p.order=i+1; } });
+    render();
+    try {
+      for (const [id,o] of changes) await db.collection("pups").doc(id).update({order:o});
+      if (msg) status(msg);
+    } catch(e){ handleWriteError(e); }
+    finally { savingOrder = false; }
+  }
+  function moveRel(id, d){
+    const list = ordered(); const i = list.findIndex(x=>x.id===id); const j = i+d;
+    if (i<0 || j<0 || j>=list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    applyOrder(list);
+    setTimeout(()=>{ const b = document.querySelector(`[data-mv="${id}|${d}"]`) || document.querySelector(`[data-mv="${id}|${-d}"]`); if(b) b.focus(); }, 0);
+  }
+  function sortBy(kind){
+    const list = ordered();
+    const cIdx = p => { const k = Object.keys(COLLARS); const di = DEFAULT_COLLARS.indexOf(p.collar); return di>=0 ? di : 20 + k.indexOf(p.collar); };
+    const latest = p => { const e = upTo(p, logDate); return e.length ? e[e.length-1][1] : null; };
+    const byW = dir => (a,b) => { const x=latest(a), y=latest(b); if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1; return dir*(x-y); };
+    const sexRank = first => p => p.sex===first ? 0 : (p.sex ? 1 : 2);
+    const cmp = {
+      collar: (a,b)=>cIdx(a)-cIdx(b),
+      light: byW(1), heavy: byW(-1),
+      girls: (a,b)=>sexRank("girl")(a)-sexRank("girl")(b),
+      boys: (a,b)=>sexRank("boy")(a)-sexRank("boy")(b),
+      name: (a,b)=>String(a.name||"").localeCompare(String(b.name||""), undefined, {numeric:true, sensitivity:"base"})
+    }[kind];
+    if(!cmp) return;
+    list.sort(cmp);
+    const label = {collar:"collar color",light:"lightest first",heavy:"heaviest first",girls:"girls first",boys:"boys first",name:"name"}[kind];
+    applyOrder(list, `Sorted by ${label}.`);
+  }
+  $("reorderBtn").onclick = ()=>{ reorder = true; render(); status("Reorder mode. Changes save as you go."); };
+  $("reorderDone").onclick = ()=>{ reorder = false; render(); status("Order saved."); $("reorderBtn").focus(); };
+  document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>sortBy(b.dataset.sort));
+
+  function setSummary(scored){
+    const c = {ok:0,warn:0,bad:0,todo:0};
+    scored.forEach(({a,today})=>{ if(today==null) c.todo++; if(a.level==="ok") c.ok++; else if(a.level==="warn") c.warn++; else if(a.level==="bad") c.bad++; });
+    $("sOk").textContent=c.ok; $("sWarn").textContent=c.warn; $("sBad").textContent=c.bad; $("sTodo").textContent=c.todo;
+  }
+
+  const status = t => { $("statusLine").textContent = t; document.querySelectorAll(".modal:not([hidden]) [data-msg], #pg:not([hidden]) [data-msg]").forEach(e=>e.textContent=t); };
+
+  function photosOf(p){ return (Array.isArray(p.photos)?p.photos:[]).filter(x=>x&&typeof x.id==="string"&&/^[0-9a-f]{32}$/.test(x.id)).map((x,i)=>({...x,i})).sort((a,b)=>a.date===b.date?a.i-b.i:(a.date<b.date?-1:1)); }
+  function fpos(o){ const c=v=>typeof v==="number"&&isFinite(v)?Math.min(100,Math.max(0,v)):50; return `object-position:${c(o&&o.fx)}% ${c(o&&o.fy)}%`; }
+  function marksOf(p){ return (Array.isArray(p.markings)?p.markings:[]).filter(x=>x&&typeof x.id==="string"&&/^[0-9a-f]{32}$/.test(x.id)).map((x,i)=>({...x,i})).sort((a,b)=>a.date===b.date?a.i-b.i:(a.date<b.date?-1:1)); }
+  async function addMarks(id, files, note){
+    const p = pups.find(x=>x.id===id); if(!p||!assets||!db) return;
+    const added = [];
+    try {
+      for (let i=0;i<files.length;i++){
+        status(files.length>1 ? `Uploading marking photo ${i+1} of ${files.length}…` : "Uploading marking photo…");
+        const blob = await shrink(files[i]);
+        const res = await assets.upload(blob, blob.type ? {} : {type:"image/jpeg"});
+        const item = {id:res.id, date:logDate}; if(note) item.note = note.slice(0,80);
+        added.push(item);
+      }
+    } catch(e){ uploadError(e); }
+    if (!added.length) return;
+    try {
+      const cur = pups.find(x=>x.id===id) || p;
+      await db.collection("pups").doc(id).update({markings:(Array.isArray(cur.markings)?cur.markings:[]).concat(added)});
+      const ni=$("mk-"+id); if(ni) ni.value="";
+      if (added.length===files.length) status(`Added ${added.length} marking photo${added.length>1?"s":""} for ${p.name}.`);
+      return added.length===files.length;
+    } catch(e){ handleWriteError(e); }
+  }
+  function weekLabel(d){ const a=dayNum(d)-dayNum(litter.birthDate); return a>=0 ? "Week "+(Math.floor(a/7)+1) : fmtDate(d); }
+
+  const OK_TYPES = ["image/jpeg","image/png","image/webp","image/gif"];
+  function isHeic(f){ return /heic|heif/i.test(f.type||"") || /\.(heic|heif)$/i.test(f.name||""); }
+  function decodeWithImg(file){
+    return new Promise((res, rej)=>{
+      const url = URL.createObjectURL(file); const img = new Image();
+      img.onload = ()=>{ res({src:img, w:img.naturalWidth, h:img.naturalHeight, done:()=>URL.revokeObjectURL(url)}); };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error("decode")); };
+      img.src = url;
+    });
+  }
+  async function decode(file){
+    try { const bmp = await createImageBitmap(file, {imageOrientation:"from-image"}); return {src:bmp, w:bmp.width, h:bmp.height, done:()=>bmp.close&&bmp.close()}; }
+    catch(e){ return decodeWithImg(file); }
+  }
+  // Re-encodes every photo as a JPEG up to 2048px: converts iPhone HEIC, applies the phone's rotation, and drops hidden location data.
+  async function shrink(file){
+    let d;
+    try { d = await decode(file); }
+    catch(e){
+      if (isHeic(file) || !OK_TYPES.includes(file.type)) { const err = new Error("heic"); err.code = "heic_unreadable"; throw err; }
+      return file;
+    }
+    try {
+      const max = 2048, sc = Math.min(1, max/Math.max(d.w, d.h));
+      const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(d.w*sc)); c.height = Math.max(1, Math.round(d.h*sc));
+      const ctx = c.getContext("2d"); ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(d.src, 0, 0, c.width, c.height);
+      d.done();
+      const blob = await new Promise(r=>c.toBlob(r, "image/jpeg", 0.88));
+      if (blob && blob.size) return blob;
+    } catch(e){}
+    if (OK_TYPES.includes(file.type)) return file;
+    const err = new Error("convert"); err.code = "heic_unreadable"; throw err;
+  }
+  async function addPhoto(id, file){
+    const p = pups.find(x=>x.id===id); if(!p||!assets||!db) return;
+    status(`Uploading ${p.name}'s photo…`);
+    try {
+      const blob = await shrink(file);
+      const res = await assets.upload(blob, blob.type ? {} : {type:"image/jpeg"});
+      const arr = (Array.isArray(p.photos)?p.photos:[]).concat([{id:res.id, date:logDate}]);
+      await db.collection("pups").doc(id).update({photos:arr});
+      status(`Added a ${weekLabel(logDate)} photo for ${p.name}.`); return true;
+    } catch(e){ uploadError(e); }
+  }
+
+  function uploadError(e){
+    const c = e && e.code;
+    status(c==="heic_unreadable" ? "This browser couldn't open that iPhone photo (HEIC). Try picking it from Photos rather than Files, or on your iPhone go to Settings › Camera › Formats and choose Most Compatible."
+      : c==="too_large" ? "That photo is too big. Try a smaller one (under 20 MB)."
+      : c==="unsupported_type" ? "That file type can't be added. Use a JPEG or PNG photo."
+      : c==="not_granted" ? "Only people who can edit this log can add photos."
+      : c==="quota_or_state" ? "Your phone is out of space. Delete some older photos or free up space."
+      : c==="rate_limited" ? "Too many uploads at once. Wait a moment and try again."
+      : "The photo wasn't added. Try again.");
+  }
+  async function addGroupPhoto(file, caption){
+    if(!assets||!db) return;
+    status("Uploading the group photo…");
+    try {
+      const blob = await shrink(file);
+      const res = await assets.upload(blob, blob.type ? {} : {type:"image/jpeg"});
+      const item = {id:res.id, date:logDate}; if(caption) item.caption = caption.slice(0,140);
+      await db.doc("litter/photos").set({items: groupPhotos.concat([item])});
+      const ci=$("gCap"); if(ci) ci.value="";
+      status(`Added a ${weekLabel(logDate)} group photo.`);
+    } catch(e){ uploadError(e); }
+  }
+
+
+  function lockScroll(){ const any = pageId || !$("wm").hidden || !$("pm").hidden; document.documentElement.style.overflow = any ? "hidden" : ""; }
+  function openPage(id){ pageId = id; $("pg").hidden = false; render(); $("pgBody").scrollTop = 0; lockScroll(); $("pgBack").focus(); }
+  function closePage(){ const id = pageId; pageId = null; $("pg").hidden = true; $("pgBody").innerHTML = ""; lockScroll(); const b = document.querySelector(`[data-page="${id}"]`); if(b) b.focus(); }
+  $("pgBack").onclick = closePage;
+  $("pg").addEventListener("click", e=>{ if(e.target.id==="pg") closePage(); });
+
+  function openWm(id){
+    const p = pups.find(x=>x.id===id); if(!p) return;
+    wmId = id;
+    $("wmTitle").textContent = `Weight for ${p.name}`;
+    $("wmDate").value = logDate; $("wmUnit").textContent = unit;
+    fillWm();
+    $("wmMsg").textContent = "";
+    $("wm").hidden = false; lockScroll();
+    setTimeout(()=>$("wmVal").focus(), 50);
+  }
+  function fillWm(){
+    const p = pups.find(x=>x.id===wmId); if(!p) return;
+    const d = $("wmDate").value || logDate;
+    const cur = (p.weights||{})[d];
+    $("wmVal").value = cur!=null ? fmtW(cur) : "";
+    $("wmVal").placeholder = unit==="oz" ? "0.0" : "0";
+    const prev = entries(p).filter(([x])=>x<d).pop();
+    $("wmSub").textContent = prev ? `Last weight: ${fmtW(prev[1])} ${unit} on ${fmtDate(prev[0])}` : "This will be the first weight for this puppy.";
+    $("wmClear").hidden = cur==null;
+  }
+  function closeWm(){ $("wm").hidden = true; wmId = null; lockScroll(); }
+  $("wmDate").addEventListener("change", fillWm);
+  $("wmCancel").onclick = closeWm;
+  $("wm").addEventListener("click", e=>{ if(e.target.id==="wm") closeWm(); });
+  async function saveWm(){
+    if(!wmId) return;
+    const raw = $("wmVal").value.trim();
+    if (!raw){ $("wmMsg").textContent = "Enter a weight first."; $("wmVal").focus(); return; }
+    const ok = await saveWeight(wmId, raw, $("wmDate").value || logDate);
+    if (ok) closeWm();
+  }
+  $("wmSave").onclick = saveWm;
+  $("wmVal").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); saveWm(); } });
+  $("wmVal").addEventListener("input", ()=>{ $("wmMsg").textContent = ""; });
+  $("wmClear").onclick = async ()=>{ if(!wmId) return; const ok = await clearWeight(wmId, $("wmDate").value || logDate); if(ok) closeWm(); };
+
+  function setPmMode(m){
+    pmMode = m;
+    $("pmProfile").setAttribute("aria-pressed", m==="profile"); $("pmMarks").setAttribute("aria-pressed", m==="marks");
+    $("pmNoteWrap").hidden = m!=="marks";
+    $("pmFile").multiple = m==="marks";
+    $("pmPick").textContent = m==="marks" ? "Choose marking photos" : "Choose photo";
+    const p = pups.find(x=>x.id===pmId);
+    $("pmHelp").textContent = m==="marks"
+      ? "Close-ups of spots, blazes or patches. You can pick several at once. These don't change the profile photo."
+      : `Becomes ${p?p.name+"'s":"the"} profile photo, dated ${fmtDate(logDate)} (${weekLabel(logDate)}).`;
+  }
+  function openPm(id){
+    const p = pups.find(x=>x.id===id); if(!p) return;
+    pmId = id; $("pmTitle").textContent = `Add photo of ${p.name}`;
+    $("pmNote").value = ""; $("pmMsg").textContent = "";
+    setPmMode("profile");
+    $("pm").hidden = false; lockScroll(); $("pmProfile").focus();
+  }
+  function closePm(){ if(pmBusy) return; $("pm").hidden = true; pmId = null; lockScroll(); }
+  $("pmProfile").onclick = ()=>setPmMode("profile");
+  $("pmMarks").onclick = ()=>setPmMode("marks");
+  $("pmClose").onclick = closePm;
+  $("pm").addEventListener("click", e=>{ if(e.target.id==="pm") closePm(); });
+  $("pmFile").addEventListener("change", async ()=>{
+    const f = $("pmFile"); const files = [...(f.files||[])]; f.value = "";
+    if(!files.length || !pmId || pmBusy) return;
+    pmBusy = true; $("pmClose").disabled = true;
+    let ok = false;
+    try {
+      ok = pmMode==="marks" ? await addMarks(pmId, files, $("pmNote").value.trim()) : await addPhoto(pmId, files[0]);
+    } finally { pmBusy = false; $("pmClose").disabled = false; }
+    if (ok) closePm();
+  });
+
+  let lb = null;
+  function openLb(pid, aid, kind){
+    let label, ph;
+    if (pid==="__group"){ ph = groupPhotos.find(x=>x&&x.id===aid); if(!ph) return; label = ph.caption || "Litter photo"; }
+    else if (kind==="m"){ const p = pups.find(x=>x.id===pid); if(!p) return; ph = marksOf(p).find(x=>x.id===aid); if(!ph) return; label = `${p.name} markings${ph.note?": "+ph.note:""}`; }
+    else { const p = pups.find(x=>x.id===pid); if(!p) return; ph = photosOf(p).find(x=>x.id===aid); if(!ph) return; label = p.name; }
+    lb = {pid, aid, kind, confirm:false, picking:false, ph, label};
+    $("lbFocus").hidden = !(db && canWrite); $("lbFocus").textContent = "Choose focus";
+    $("lbFrame").classList.remove("picking"); $("lbDot").hidden = true;
+    const canNote = kind==="m" && !!db && canWrite;
+    $("lbEdit").hidden = !canNote; $("lbNote").value = canNote ? (ph.note||"") : "";
+    $("lbSave").textContent = "Save caption";
+    $("lbImg").src = srcOf(aid); $("lbImg").alt = `${label}, ${weekLabel(ph.date)}`;
+    $("lbCap").textContent = `${label} · ${weekLabel(ph.date)} · ${fmtDate(ph.date)}`;
+    $("lbDel").hidden = !(assets && canWrite); $("lbDel").textContent = "Delete photo";
+    $("lb").hidden = false; $("lbClose").focus();
+  }
+  function closeLb(){ $("lb").hidden = true; lb = null; $("lbFrame").classList.remove("picking"); $("lbDot").hidden = true; }
+  async function saveNote(){
+    if(!lb || lb.kind!=="m" || !db) return;
+    const {pid, aid} = lb; const p = pups.find(x=>x.id===pid); if(!p) return;
+    const note = $("lbNote").value.trim().slice(0,80);
+    const arr = (Array.isArray(p.markings)?p.markings:[]).map(x=>{ if(!x||x.id!==aid) return x; const y={...x}; if(note) y.note=note; else delete y.note; return y; });
+    try {
+      await db.collection("pups").doc(pid).update({markings:arr});
+      lb.ph = {...lb.ph, note}; lb.label = `${p.name} markings${note?": "+note:""}`;
+      if(!lb.picking) $("lbCap").textContent = `${lb.label} · ${weekLabel(lb.ph.date)} · ${fmtDate(lb.ph.date)}`;
+      $("lbImg").alt = lb.label;
+      $("lbSave").textContent = "Saved";
+      status(note ? "Caption saved." : "Caption removed.");
+    } catch(e){ handleWriteError(e); }
+  }
+  $("lbSave").onclick = saveNote;
+  $("lbNote").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); saveNote(); } });
+  $("lbNote").addEventListener("input", ()=>{ $("lbSave").textContent = "Save caption"; });
+  function placeDot(fx, fy){ const d=$("lbDot"); d.style.left=fx+"%"; d.style.top=fy+"%"; d.hidden=false; }
+  $("lbFocus").onclick = ()=>{
+    if(!lb) return;
+    lb.picking = !lb.picking;
+    $("lbFrame").classList.toggle("picking", lb.picking);
+    $("lbFocus").textContent = lb.picking ? "Done" : "Choose focus";
+    if (lb.picking){
+      placeDot(typeof lb.ph.fx==="number"?lb.ph.fx:50, typeof lb.ph.fy==="number"?lb.ph.fy:50);
+      $("lbCap").textContent = "Tap the part of the photo you want kept in view.";
+    } else {
+      $("lbDot").hidden = true;
+      $("lbCap").textContent = `${lb.label} · ${weekLabel(lb.ph.date)} · ${fmtDate(lb.ph.date)}`;
+    }
+  };
+  $("lbImg").addEventListener("click", async ev=>{
+    if(!lb || !lb.picking || !db) return;
+    const r = ev.currentTarget.getBoundingClientRect();
+    const fx = Math.round(Math.min(100,Math.max(0,(ev.clientX-r.left)/r.width*100)));
+    const fy = Math.round(Math.min(100,Math.max(0,(ev.clientY-r.top)/r.height*100)));
+    placeDot(fx, fy);
+    const {pid, aid, kind} = lb; lb.ph = {...lb.ph, fx, fy};
+    const setF = arr => (Array.isArray(arr)?arr:[]).map(x=>x&&x.id===aid?{...x,fx,fy}:x);
+    try {
+      if (pid==="__group") await db.doc("litter/photos").set({items:setF(groupPhotos)});
+      else {
+        const p = pups.find(x=>x.id===pid); if(!p) return;
+        const field = kind==="m" ? "markings" : "photos";
+        await db.collection("pups").doc(pid).update({[field]:setF(p[field])});
+      }
+      status("Photo focus saved.");
+    } catch(e){ handleWriteError(e); }
+  });
+  $("lbClose").onclick = closeLb;
+  $("lb").addEventListener("click", e=>{ if(e.target.id==="lb") closeLb(); });
+  document.addEventListener("keydown", e=>{ if(e.key!=="Escape") return; if(lb) closeLb(); else if(!$("wm").hidden) closeWm(); else if(!$("pm").hidden) closePm(); else if(pageId) closePage(); });
+  $("lbDel").onclick = async ()=>{
+    if(!lb) return;
+    if(!lb.confirm){ lb.confirm=true; $("lbDel").textContent="Tap again to delete for good"; return; }
+    const {pid, aid, kind} = lb; closeLb();
+    if (kind==="m"){
+      const p = pups.find(x=>x.id===pid); if(!p||!db) return;
+      try { await db.collection("pups").doc(pid).update({markings:(Array.isArray(p.markings)?p.markings:[]).filter(x=>x&&x.id!==aid)}); try{ await assets.delete(aid); }catch(e){} status(`Deleted a marking photo of ${p.name}.`); }
+      catch(e){ handleWriteError(e); }
+      return;
+    }
+    if (pid==="__group"){
+      if(!db) return;
+      try { await db.doc("litter/photos").set({items: groupPhotos.filter(x=>x&&x.id!==aid)}); try{ await assets.delete(aid); }catch(e){} status("Deleted a group photo."); }
+      catch(e){ handleWriteError(e); }
+      return;
+    }
+    const p = pups.find(x=>x.id===pid);
+    if(!p||!db) return;
+    try {
+      const arr = (Array.isArray(p.photos)?p.photos:[]).filter(x=>x&&x.id!==aid);
+      await db.collection("pups").doc(pid).update({photos:arr});
+      try { await assets.delete(aid); } catch(e){}
+      status(`Deleted a photo of ${p.name}.`);
+    } catch(e){ handleWriteError(e); }
+  };
+
+  async function saveWeight(id, val, date=logDate){
+    if(!db) return;
+    const p = pups.find(x=>x.id===id); if(!p) return;
+    const raw = String(val).trim();
+    if (raw===""){ return clearWeight(id, date); }
+    const g = fromInput(raw);
+    if (g==null){ status("Enter a weight as a number, like "+(unit==="oz"?"15.5":"440")+"."); return false; }
+    try { await db.collection("pups").doc(id).update({weights:{[date]: Math.round(g*10)/10}}); status(`Saved ${p.name}: ${fmtW(g)} ${unit}.`); return true; }
+    catch(e){ handleWriteError(e); }
+  }
+  async function clearWeight(id, date=logDate){
+    const p = pups.find(x=>x.id===id); if(!p||!db) return;
+    const body = JSON.parse(JSON.stringify(p)); delete body.id;
+    body.weights = {...(body.weights||{})}; delete body.weights[date];
+    try { await db.collection("pups").doc(id).set(body); status(`Cleared ${p.name}'s weight for ${fmtDate(date)}.`); return true; }
+    catch(e){ handleWriteError(e); }
+  }
+  async function savePup(id, patch){
+    if(!db) return;
+    try { await db.collection("pups").doc(id).update(patch); status("Saved."); } catch(e){ handleWriteError(e); }
+  }
+  async function setupLitter(){
+    if(!db) return;
+    try {
+      for (let i=0;i<10;i++){
+        const id="p"+pad(i+1);
+        await db.collection("pups").doc(id).set({order:i+1,name:DEFAULT_COLLARS[i][0].toUpperCase()+DEFAULT_COLLARS[i].slice(1)+" collar",collar:DEFAULT_COLLARS[i],weights:{}});
+      }
+      status("Set up 10 puppies.");
+    } catch(e){ handleWriteError(e); }
+  }
+  function handleWriteError(e){
+    if (e && e.code==="invalid_argument" && canWrite===null){ canWrite=false; render(); }
+    status(e && e.code==="invalid_argument" ? "That change wasn't saved. You may only have view access." : "That change wasn't saved. Your phone may be out of space.");
+  }
+
+  $("logDate").addEventListener("change", e=>{ if(e.target.value){ logDate=e.target.value; render(); }});
+  $("birthDate").addEventListener("change", async e=>{
+    if(!e.target.value||!db) return; litter.birthDate=e.target.value; render();
+    try { await db.doc("litter/info").set({birthDate:litter.birthDate}); status("Birth date saved."); } catch(err){ handleWriteError(err); }
+  });
+  function setUnit(u){ unit=u; try{localStorage.setItem("unit",u);}catch(e){} render(); }
+  $("uOz").onclick=()=>setUnit("oz"); $("uG").onclick=()=>setUnit("g");
+
+  render();
+
+  (async()=>{
+    const [d, user, a] = await Promise.all([window.claude?.use?.("db"), window.claude?.use?.("user"), window.claude?.use?.("assets")]).catch(()=>[null,null,null]);
+    db = d; assets = a || null;
+    if (user){ try { const c = await user.can("data.write"); canWrite = (c===null) ? true : c; } catch(e){} }
+    if (!db){ loaded=true; canWrite=false; status("This browser can't store the log. Open it in Safari and add it to your Home Screen."); render(); return; }
+    const timer = setTimeout(()=>status("The log is taking a while to load."),10000);
+    db.doc("litter/info").onSnapshot(s=>{ if(s.exists){ const b=s.data(); if(b.birthDate) litter.birthDate=b.birthDate; } render(); }, ()=>{});
+    db.doc("litter/photos").onSnapshot(s=>{ const b=s.exists?s.data():null; groupPhotos = (b&&Array.isArray(b.items))?b.items.slice():[]; render(); }, ()=>{});
+    db.collection("pups").onSnapshot(snap=>{
+      pups = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(!snap.metadata.fromCache && !confirmed){ confirmed = true; clearTimeout(timer); status(pups.length?"Tap + Weight on a puppy to log today's weight.":"Set up the litter to start logging."); }
+      loaded = true; render();
+    }, err=>{ clearTimeout(timer); loaded=true; status("The log stopped updating. Reload the page to reconnect."); render(); });
+  })();
+})();
+</script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const msg = t => { $("bkMsg").textContent = t; };
+  const KEY = "lastBackupAt";
+  const getLast = () => { try { return Number(localStorage.getItem(KEY)) || 0; } catch(e){ return 0; } };
+  const setLast = v => { try { localStorage.setItem(KEY, String(v)); } catch(e){} };
+  const ago = ms => { const d = Math.floor(ms/86400000); if (d<=0) return "today"; if (d===1) return "yesterday"; return d + " days ago"; };
+  const mb = n => n < 1048576 ? Math.max(1, Math.round(n/1024)) + " KB" : (n/1048576).toFixed(n>10485760?0:1) + " MB";
+  const today = () => { const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+
+  async function refreshInfo(){
+    await LocalStore.ready.catch(()=>{});
+    const last = getLast(), has = LocalStore.hasData();
+    const used = await LocalStore.usage();
+    $("bkInfo").textContent = [
+      `${LocalStore.photoCount()} photo${LocalStore.photoCount()===1?"":"s"} on this phone` + (used!=null ? ` (${mb(used)} used)` : ""),
+      last ? `Last backup: ${ago(Date.now()-last)}` : "No backup yet"
+    ].join(" · ");
+    const stale = has && (!last || Date.now()-last > 3*86400000);
+    $("bkNudge").hidden = !stale;
+    $("bkNudge").textContent = last ? `Last backup was ${ago(Date.now()-last)}. Back up now` : "Nothing is backed up yet. Back up now";
+  }
+
+  let pending = null;
+  $("bkMake").onclick = async ()=>{
+    $("bkMake").disabled = true; $("bkSave").hidden = true; pending = null;
+    msg("Packing up your log…");
+    try {
+      const r = await LocalStore.exportZip((i,n)=>{ if (n>3) msg(`Packing up your log… ${i} of ${n}`); });
+      pending = new File([r.zip], `litter-backup-${today()}.zip`, {type:"application/zip"});
+      $("bkSave").hidden = false; $("bkSave").focus();
+      msg(`Backup ready: ${r.puppies} puppies, ${r.photos} photos, ${mb(r.zip.size)}. Tap "Save backup file", then choose Save to Files.`);
+    } catch(e){ msg("The backup couldn't be created. Try again, or free up some space on your phone."); }
+    finally { $("bkMake").disabled = false; }
+  };
+  $("bkSave").onclick = async ()=>{
+    if (!pending) return;
+    const file = pending;
+    try {
+      if (navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:"Litter Weigh Log backup"});
+      } else {
+        const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = file.name;
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
+      }
+      setLast(Date.now()); $("bkSave").hidden = true; pending = null;
+      msg("Backup saved. Keep it somewhere safe, like iCloud Drive."); refreshInfo();
+    } catch(e){
+      if (e && e.name==="AbortError") msg("Backup not saved. Tap \"Save backup file\" to try again.");
+      else msg("The backup couldn't be saved. Try again.");
+    }
+  };
+
+  let restoreInfo = null;
+  $("restoreFile").addEventListener("change", async ()=>{
+    const f = $("restoreFile").files && $("restoreFile").files[0]; $("restoreFile").value = "";
+    if (!f) return;
+    $("backupSec").scrollIntoView({behavior:"smooth", block:"start"});
+    msg("Reading the backup…");
+    try {
+      restoreInfo = await LocalStore.readBackup(f);
+      const when = restoreInfo.exportedAt ? new Date(restoreInfo.exportedAt).toLocaleString(undefined, {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}) : "unknown date";
+      $("bkConfirmText").textContent = `This backup has ${restoreInfo.puppies} puppies and ${restoreInfo.photos} photos, saved ${when}. Restoring replaces everything currently in the app on this phone.`;
+      $("bkConfirm").hidden = false; msg("");
+    } catch(e){ restoreInfo = null; msg(e.message || "That file couldn't be read."); }
+  });
+  $("bkCancel").onclick = ()=>{ restoreInfo = null; $("bkConfirm").hidden = true; msg("Restore cancelled."); };
+  $("bkApply").onclick = async ()=>{
+    if (!restoreInfo) return;
+    $("bkApply").disabled = true; $("bkCancel").disabled = true;
+    try {
+      await restoreInfo.apply((i,n)=>msg(`Restoring photos… ${i} of ${n}`));
+      setLast(Date.now());
+      msg("Restored. Reloading…");
+      setTimeout(()=>location.reload(), 400);
+    } catch(e){
+      msg(e && e.code==="quota_or_state" ? "Your phone ran out of space while restoring. Free up space and try again." : "The restore didn't finish. Try again.");
+      $("bkApply").disabled = false; $("bkCancel").disabled = false;
+    }
+  };
+  $("bkNudge").onclick = ()=>{ $("backupSec").scrollIntoView({behavior:"smooth", block:"start"}); setTimeout(()=>$("bkMake").focus(), 400); };
+
+  // Install tip: shown only in the browser, not once it's on the home screen
+  const standalone = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  let dismissed = false; try { dismissed = localStorage.getItem("installTipHidden")==="1"; } catch(e){}
+  $("installTip").hidden = standalone || dismissed;
+  $("installHide").onclick = ()=>{ $("installTip").hidden = true; try { localStorage.setItem("installTipHidden","1"); } catch(e){} };
+
+  setInterval(refreshInfo, 60000);
+  document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="visible") refreshInfo(); });
+  // refresh after data changes settle
+  let t = null; const obs = new MutationObserver(()=>{ clearTimeout(t); t = setTimeout(refreshInfo, 800); });
+  obs.observe($("rows"), {childList:true});
+  refreshInfo();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+  }
+})();
+</script>
 </body>
-
 </html>
